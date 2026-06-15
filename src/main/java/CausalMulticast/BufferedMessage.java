@@ -4,9 +4,9 @@ import java.util.Map;
 
 public class BufferedMessage {
 
-    private String content;
-    private String senderId;
-    private Map<String, Integer> vectorClock;
+    private final String content;
+    private final String senderId;
+    private final Map<String, Integer> vectorClock;
     private boolean delivered;
 
     public BufferedMessage(String content, String senderId, Map<String, Integer> vectorClock) {
