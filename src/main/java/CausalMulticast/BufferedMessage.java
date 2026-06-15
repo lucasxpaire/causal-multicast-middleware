@@ -8,6 +8,7 @@ public class BufferedMessage {
     private final String senderId;
     private final Map<String, Integer> vectorClock;
     private boolean delivered;
+    private int sequenceNumber;
 
     public BufferedMessage(String content, String senderId, Map<String, Integer> vectorClock) {
         this.content = content;
