@@ -12,6 +12,7 @@ public class CausalMulticast {
     private Map<String, Integer> peerToIndex;
     private int[][] matrixClock;
     private final List<BufferedMessage> messageBuffer;
+    private int localMessagesDelivered = 0;
 
     public CausalMulticast(String ip, Integer port, ICausalMulticast client) {
         this.localId = ip + ":" + port;
@@ -92,4 +93,153 @@ public class CausalMulticast {
     private void sendToGroup(BufferedMessage message) {
         // TODO: implementar a transmissão UDP
     }
+
+    public void onMessageReceived(BufferedMessage message) {
+        String senderId = message.getSenderId();
+
+        synchronized (this) {
+            Integer senderIdx = this.peerToIndex.get(senderId);
+            Integer localPeerIdx = this.peerToIndex.get(this.localId);
+
+            if (senderIdx == null || localPeerIdx == null) {
+                return;
+            }
+
+            int msgSeq = message.getVectorClock().getOrDefault(senderId, 0);
+            int deliveredCount;
+            if (senderId.equals(this.localId)) {
+                deliveredCount = this.localMessagesDelivered;
+            } else {
+                deliveredCount = this.matrixClock[localPeerIdx][senderIdx];
+            }
+            if (msgSeq < deliveredCount) {
+                return;
+            }
+
+            for (String peer : this.activePeers) {
+                Integer colIdx = this.peerToIndex.get(peer);
+                if (colIdx != null) {
+                    this.matrixClock[senderIdx][colIdx] = message.getVectorClock().getOrDefault(peer, 0);
+                }
+            }
+
+            this.messageBuffer.add(message);
+
+            // 4. Loop de Entrega Causal (Deliver Scan)
+            boolean newDelivery;
+            do {
+                newDelivery = false;
+                for (BufferedMessage bufferedMsg : this.messageBuffer) {
+                    if (!bufferedMsg.isDelivered()) {
+                        String msgSender = bufferedMsg.getSenderId();
+                        Integer msgSenderIdx = this.peerToIndex.get(msgSender);
+
+                        if (msgSenderIdx != null) {
+                            boolean canDeliver = true;
+                            for (String peer : this.activePeers) {
+                                Integer peerIdx = this.peerToIndex.get(peer);
+                                if (peerIdx != null) {
+                                    int msgClockVal = bufferedMsg.getVectorClock().getOrDefault(peer, 0);
+                                    int localClockVal = this.matrixClock[localPeerIdx][peerIdx];
+
+                                    if (msgClockVal > localClockVal) {
+                                        canDeliver = false;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (canDeliver) {
+                                bufferedMsg.setDelivered(true);
+
+                                if (msgSender.equals(this.localId)) {
+                                    this.localMessagesDelivered++;
+                                } else {
+                                    this.matrixClock[localPeerIdx][msgSenderIdx] = this.matrixClock[localPeerIdx][msgSenderIdx] + 1;
+                                }
+
+                                this.client.deliver(bufferedMsg.getContent());
+
+                                newDelivery = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            } while (newDelivery);
+
+            List<BufferedMessage> stableMessages = new ArrayList<>();
+            for (BufferedMessage bufferedMsg : this.messageBuffer) {
+                if (bufferedMsg.isDelivered()) {
+                    String msgSender = bufferedMsg.getSenderId();
+                    Integer msgSenderIdx = this.peerToIndex.get(msgSender);
+
+                    if (msgSenderIdx != null) {
+                        int msgSeqNumber = bufferedMsg.getVectorClock().getOrDefault(msgSender, 0);
+
+                        // Encontra o menor relógio registrado para este remetente entre  todos do grupo
+                        int minReceived = Integer.MAX_VALUE;
+                        for (String peer : this.activePeers) {
+                            Integer peerIdx = this.peerToIndex.get(peer);
+                            if (peerIdx != null) {
+                                int val = this.matrixClock[peerIdx][msgSenderIdx];
+                                if (val < minReceived) {
+                                    minReceived = val;
+                                }
+                            }
+                        }
+
+                        // Se todos os nós já receberam pelo menos essa mensagem, ela é estável
+                        if (msgSeqNumber <= minReceived) {
+                            stableMessages.add(bufferedMsg);
+                        }
+                    }
+                }
+            }
+            this.messageBuffer.removeAll(stableMessages);
+        }
+    }
+
+    public synchronized String getMatrixClockState() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n=================== MATRIZ DE RELÓGIOS ===================\n");
+        for (String rowPeer : this.activePeers) {
+            Integer rowIdx = this.peerToIndex.get(rowPeer);
+            if (rowIdx != null) {
+                String suffix = "";
+                if (rowPeer.equals(this.localId)) {
+                    suffix = " (Você)";
+                }
+                sb.append(rowPeer).append(suffix).append(" -> [");
+
+                for (int col = 0; col < this.activePeers.size(); col++) {
+                    sb.append(this.matrixClock[rowIdx][col]);
+                    if (col < this.activePeers.size() - 1) {
+                        sb.append(", ");
+                    }
+                }
+                sb.append("]\n");
+            }
+        }
+        sb.append("==========================================================");
+        return sb.toString();
+    }
+
+    public synchronized String getBufferState() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n================== BUFFER DE MENSAGENS ==================\n");
+        sb.append("Total de mensagens na fila: ").append(this.messageBuffer.size()).append("\n");
+
+        List<BufferedMessage> bufferCopy = new ArrayList<>(this.messageBuffer);
+        for (BufferedMessage msg : bufferCopy) {
+            sb.append("- De: ").append(msg.getSenderId())
+                    .append(" | Conteúdo: \"").append(msg.getContent()).append("\"")
+                    .append(" | Relógio da Mensagem: ").append(msg.getVectorClock())
+                    .append(" | Entregue à Tela: ").append(msg.isDelivered())
+                    .append("\n");
+        }
+        sb.append("=========================================================");
+        return sb.toString();
+    }
 }
+
