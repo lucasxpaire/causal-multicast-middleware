@@ -1,13 +1,13 @@
 package CausalMulticast;
 
 /**
- * Contrato que a aplicaÃ§Ã£o cliente deve implementar para receber as mensagens entregues pelo middleware.
+ * Contrato que a aplicação cliente deve implementar para receber as mensagens entregues pelo middleware.
  */
 public interface ICausalMulticast {
     /**
-     * Entrega uma mensagem recebida e ordenada causalmente para a aplicaÃ§Ã£o.
+     * Entrega uma mensagem recebida e ordenada causalmente para a aplicação.
      *
-     * @param msg ConteÃºdo textual da mensagem entregue.
+     * @param msg Conteúdo textual da mensagem entregue.
      */
     public void deliver(String msg);
 }

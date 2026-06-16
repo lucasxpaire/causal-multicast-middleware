@@ -4,41 +4,41 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 
 /**
- * Receptor assÃ­ncrono baseado em UDP executado em uma Thread dedicada (Daemon/Worker).
+ * Receptor assíncrono baseado em UDP executado em uma Thread dedicada (Daemon/Worker).
  * Implementa a interface {@link Runnable} para escutar continuamente uma porta de rede
- * local Unicast. Captura pacotes brutos do sistema operacional, reconstrÃ³i os objetos
- * estruturados de mensagem atravÃ©s do {@link MessageSerializer} e os encaminha de forma
- * condicional para a fila de atraso artificial ou diretamente para o nÃºcleo do middleware.
+ * local Unicast. Captura pacotes brutos do sistema operacional, reconstrói os objetos
+ * estruturados de mensagem através do {@link MessageSerializer} e os encaminha de forma
+ * condicional para a fila de atraso artificial ou diretamente para o núcleo do middleware.
  *  @author Seu Nome
  * @version 1.0
  */
 public class UDPReceiver implements Runnable {
 
-    /** A porta local UDP associada a este socket para recepÃ§Ã£o de pacotes. */
+    /** A porta local UDP associada a este socket para recepção de pacotes. */
     private final int localPort;
 
-    /** ReferÃªncia ao nÃºcleo do middleware de ordenaÃ§Ã£o causal para entrega direta de dados. */
+    /** Referência ao núcleo do middleware de ordenação causal para entrega direta de dados. */
     private final CausalMulticast causalMulticast;
 
     /** O socket Unicast Datagram nativo do Java utilizado para a escuta da porta. */
     private DatagramSocket socket;
 
-    /** Flag de controle de execuÃ§Ã£o com semÃ¢ntica de memÃ³ria volÃ¡til para interrupÃ§Ã£o segura entre threads. */
+    /** Flag de controle de execução com semântica de memória volátil para interrupção segura entre threads. */
     private volatile boolean running = true;
 
-    /**  Tamanho mÃ¡ximo permitido para o payload de dados de um datagrama UDP clÃ¡ssico.
-     * Calculado como: 65535 (Tamanho mÃ¡x. IP) - 20 (Header IPv4) - 8 (Header UDP) = 65507 bytes.
+    /**  Tamanho máximo permitido para o payload de dados de um datagrama UDP clássico.
+     * Calculado como: 65535 (Tamanho máx. IP) - 20 (Header IPv4) - 8 (Header UDP) = 65507 bytes.
      */
     private static final int BUFFER_SIZE = 65507;
 
-    /** ReferÃªncia ao gerenciador de atrasos artificiais de entrega do sistema. */
+    /** Referência ao gerenciador de atrasos artificiais de entrega do sistema. */
     private DelayQueue delayQueue;
 
     /**
      * Construtor do Receptor UDP.
-     *  @param localPort Porta lÃ³gica de rede que o nÃ³ ocuparÃ¡.
-     * @param causalMulticast InstÃ¢ncia ativa do middleware de ordenaÃ§Ã£o causal.
-     * @param delayQueue InstÃ¢ncia do gerenciador de filas de atraso para peers conhecidos.
+     *  @param localPort Porta lógica de rede que o nó ocupará.
+     * @param causalMulticast Instância ativa do middleware de ordenação causal.
+     * @param delayQueue Instância do gerenciador de filas de atraso para peers conhecidos.
      */
     public UDPReceiver(int localPort, CausalMulticast causalMulticast, DelayQueue delayQueue) {
         this.localPort = localPort;
@@ -48,9 +48,9 @@ public class UDPReceiver implements Runnable {
 
     /**
      * Loop principal de processamento executado de forma concorrente em background.
-     * Aloca o socket na porta especificada e entra em um ciclo de bloqueio contÃ­nuo aguardando
-     * a chegada de pacotes fÃ­sicos. Realiza o recorte preciso do buffer de bytes e delega
-     * a classificaÃ§Ã£o causal ou o agendamento de atraso.
+     * Aloca o socket na porta especificada e entra em um ciclo de bloqueio contínuo aguardando
+     * a chegada de pacotes físicos. Realiza o recorte preciso do buffer de bytes e delega
+     * a classificação causal ou o agendamento de atraso.
      */
     @Override
     public void run() {
@@ -62,14 +62,14 @@ public class UDPReceiver implements Runnable {
                 byte[] buffer = new byte[BUFFER_SIZE];
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 
-                // Bloqueia a thread atÃ© que um pacote seja recebido na porta de rede
+                // Bloqueia a thread até que um pacote seja recebido na porta de rede
                 socket.receive(packet);
 
                 try {
                     byte[] data = new byte[packet.getLength()];
                     System.arraycopy(packet.getData(), 0, data, 0, packet.getLength());
 
-                    // ReconstrÃ³i a mensagem a partir do payload em JSON/Bytes
+                    // Reconstrói a mensagem a partir do payload em JSON/Bytes
                     BufferedMessage message = MessageSerializer.fromBytes(data);
                     String senderId = message.getSenderId();
                     long delay = delayQueue.getPeerDelay(senderId);
@@ -78,7 +78,7 @@ public class UDPReceiver implements Runnable {
 
                     if (delay > 0) {
                         delayQueue.addDelayedMessage(senderId, message, delay);
-                        System.out.println("[DELAY] Atraso de " + delay + "ms aplicado Ã  mensagem de " + senderId);
+                        System.out.println("[DELAY] Atraso de " + delay + "ms aplicado à mensagem de " + senderId);
                     } else {
                         causalMulticast.onMessageReceived(message);
                     }
@@ -89,7 +89,7 @@ public class UDPReceiver implements Runnable {
         } catch (Exception e) {
             System.err.println("[UDP RECEIVER FALHOU] " + e.getMessage());
         } finally {
-            // Garante a liberaÃ§Ã£o dos recursos do sistema operacional ao sair do loop
+            // Garante a liberação dos recursos do sistema operacional ao sair do loop
             if (socket != null && !socket.isClosed()) {
                 socket.close();
             }
@@ -97,9 +97,9 @@ public class UDPReceiver implements Runnable {
     }
 
     /**
-     * Interrompe a execuÃ§Ã£o do laÃ§o de recepÃ§Ã£o de forma limpa.
-     * Modifica a flag de estado e forÃ§a o fechamento imediato do {@link DatagramSocket}
-     * subjacente para desbloquear a operaÃ§Ã£o sÃ­ncrona {@code socket.receive(packet)} por meio de uma exceÃ§Ã£o controlada.
+     * Interrompe a execução do laço de recepção de forma limpa.
+     * Modifica a flag de estado e força o fechamento imediato do {@link DatagramSocket}
+     * subjacente para desbloquear a operação síncrona {@code socket.receive(packet)} por meio de uma exceção controlada.
      */
     public void stop() {
         running = false;

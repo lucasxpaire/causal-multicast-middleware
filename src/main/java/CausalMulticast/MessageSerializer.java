@@ -3,27 +3,27 @@ package CausalMulticast;
 import com.google.gson.Gson;
 
 /**
- * Classe utilitÃ¡ria responsÃ¡vel pela serializaÃ§Ã£o e desserializaÃ§Ã£o de mensagens.
- * Fornece mÃ©todos estÃ¡ticos para converter instÃ¢ncias de {@link BufferedMessage} em
+ * Classe utilitária responsável pela serialização e desserialização de mensagens.
+ * Fornece métodos estáticos para converter instâncias de {@link BufferedMessage} em
  * strings JSON e arrays de bytes (e vice-versa).
  * @author -
  * @version 1.0
  */
 public class MessageSerializer {
 
-    /** InstÃ¢ncia compartilhada e thread-safe do Gson para manipulaÃ§Ã£o eficiente de JSON. */
+    /** Instância compartilhada e thread-safe do Gson para manipulação eficiente de JSON. */
     private static final Gson gson = new Gson();
 
     /**
-     * Construtor privado para impedir a instanciaÃ§Ã£o desnecessÃ¡ria desta classe utilitÃ¡ria.
+     * Construtor privado para impedir a instanciação desnecessária desta classe utilitária.
      */
     private MessageSerializer() {
     }
 
     /**
      * Serializa um objeto do tipo {@link BufferedMessage} para o formato de texto JSON.
-     * @param message A instÃ¢ncia da mensagem contendo carga Ãºtil e metadados.
-     * @return Uma {@link String} contendo a representaÃ§Ã£o textual JSON do objeto.
+     * @param message A instância da mensagem contendo carga útil e metadados.
+     * @return Uma {@link String} contendo a representação textual JSON do objeto.
      */
     public static String serialize(BufferedMessage message) {
         return gson.toJson(message);
@@ -32,15 +32,15 @@ public class MessageSerializer {
     /**
      * Desserializa uma string formatada em JSON de volta para um objeto Java {@link BufferedMessage}.
      * @param json A string textual em formato JSON que representa a mensagem.
-     * @return Uma nova instÃ¢ncia de {@link BufferedMessage} preenchida com os dados originais.
+     * @return Uma nova instância de {@link BufferedMessage} preenchida com os dados originais.
      */
     public static BufferedMessage deserialize(String json) {
         return gson.fromJson(json, BufferedMessage.class);
     }
 
     /**
-     * Converte uma instÃ¢ncia de {@link BufferedMessage} diretamente em um array de bytes.
-     * @param message A instÃ¢ncia da mensagem que serÃ¡ convertida.
+     * Converte uma instância de {@link BufferedMessage} diretamente em um array de bytes.
+     * @param message A instância da mensagem que será convertida.
      * @return Um array de bytes pronto para ser encapsulado e transmitido.
      */
     public static byte[] toBytes(BufferedMessage message) {
@@ -48,9 +48,9 @@ public class MessageSerializer {
     }
 
     /**
-     * ReconstrÃ³i uma instÃ¢ncia de {@link BufferedMessage} a partir de um array de bytes bruto.
-     * @param data O array de bytes lido diretamente do buffer de recepÃ§Ã£o.
-     * @return A instÃ¢ncia de {@link BufferedMessage} com sua integridade restaurada.
+     * Reconstrói uma instância de {@link BufferedMessage} a partir de um array de bytes bruto.
+     * @param data O array de bytes lido diretamente do buffer de recepção.
+     * @return A instância de {@link BufferedMessage} com sua integridade restaurada.
      */
     public static BufferedMessage fromBytes(byte[] data) {
         String json = new String(data, java.nio.charset.StandardCharsets.UTF_8);

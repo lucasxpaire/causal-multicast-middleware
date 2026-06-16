@@ -7,23 +7,23 @@ import java.util.concurrent.*;
  */
 public class DelayQueue {
 
-    /** Mapa concorrente que associa cada identificador de peer √† sua respectiva fila de agendamento de tarefas. */
+    /** Mapa concorrente que associa cada identificador de peer ‡ sua respectiva fila de agendamento de tarefas. */
     private final ConcurrentHashMap<String, DelayedMessageQueue> peerQueues = new ConcurrentHashMap<>();
 
-    /** Refer√™ncia do middleware de ordena√ß√£o causal para onde as mensagens ser√£o despachadas ap√≥s o t√©rmino do atraso. */
+    /** ReferÍncia do middleware de ordenaÁ„o causal para onde as mensagens ser„o despachadas apÛs o tÈrmino do atraso. */
     private final CausalMulticast causalMulticast;
 
     /**
      * Construtor do gerenciador de filas de atraso.
-     *  @param causalMulticast Inst√¢ncia do middleware de ordena√ß√£o causal associada ao n√≥ local.
+     *  @param causalMulticast Inst‚ncia do middleware de ordenaÁ„o causal associada ao nÛ local.
      */
     public DelayQueue(CausalMulticast causalMulticast) {
         this.causalMulticast = causalMulticast;
     }
 
     /**
-     * Adiciona uma mensagem √† fila de atraso de um peer.
-     *  @param peerId ID do peer destinat√°rio.
+     * Adiciona uma mensagem ‡ fila de atraso de um peer.
+     *  @param peerId ID do peer destinat·rio.
      * @param message Mensagem a atrasar.
      * @param delayMillis Tempo de atraso em milissegundos.
      */
@@ -33,9 +33,9 @@ public class DelayQueue {
     }
 
     /**
-     * Define o atraso padr√£o para um peer espec√≠fico.
+     * Define o atraso padr„o para um peer especÌfico.
      *  @param peerId ID do peer alvo.
-     * @param delayMillis Tempo de reten√ß√£o em milissegundos.
+     * @param delayMillis Tempo de retenÁ„o em milissegundos.
      */
     public void setPeerDelay(String peerId, long delayMillis) {
         peerQueues.computeIfAbsent(peerId, k -> new DelayedMessageQueue())
@@ -45,7 +45,7 @@ public class DelayQueue {
     /**
      * Retorna o atraso configurado para um peer.
      *  @param peerId ID do peer que se deseja consultar.
-     * @return O atraso padr√£o mapeado para este peer em milissegundos.
+     * @return O atraso padr„o mapeado para este peer em milissegundos.
      */
     public long getPeerDelay(String peerId) {
         DelayedMessageQueue queue = peerQueues.get(peerId);
@@ -53,37 +53,37 @@ public class DelayQueue {
     }
 
     /**
-     * Classe interna respons√°vel por gerenciar o agendamento de tarefas e o
+     * Classe interna respons·vel por gerenciar o agendamento de tarefas e o
      * ciclo de vida do executor thread-pool de um peer individual.
      */
     private class DelayedMessageQueue {
 
-        /** Tempo de atraso padr√£o (em milissegundos) aplicado √†s mensagens deste peer espec√≠fico. */
+        /** Tempo de atraso padr„o (em milissegundos) aplicado ‡s mensagens deste peer especÌfico. */
         private long defaultDelay = 0;
 
-        /** Fila thread-safe contendo as refer√™ncias das tarefas futuras de agendamento que ainda n√£o foram executadas ou canceladas. */
+        /** Fila thread-safe contendo as referÍncias das tarefas futuras de agendamento que ainda n„o foram executadas ou canceladas. */
         private final java.util.Queue<ScheduledFuture<?>> pendingTasks = new ConcurrentLinkedQueue<>();
 
-        /** Agendador interno de thread √∫nica dedicado a disparar os eventos de libera√ß√£o de mensagens deste peer. */
+        /** Agendador interno de thread ˙nica dedicado a disparar os eventos de liberaÁ„o de mensagens deste peer. */
         private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
         /**
-         * Cria e agenda uma tarefa ass√≠ncrona para liberar a mensagem de volta ao middleware
-         * ap√≥s o estouro do cron√¥metro de atraso.
-         *  @param message Mensagem que ser√° retida temporariamente.
+         * Cria e agenda uma tarefa assÌncrona para liberar a mensagem de volta ao middleware
+         * apÛs o estouro do cronÙmetro de atraso.
+         *  @param message Mensagem que ser· retida temporariamente.
          * @param delayMillis Tempo de agendamento em milissegundos.
          */
         public void addMessage(BufferedMessage message, long delayMillis) {
             ScheduledFuture<?> task = scheduler.schedule(() -> {
                 causalMulticast.onMessageReceived(message);
-                System.out.println("[DELAY QUEUE] Mensagem liberada ap√≥s " + delayMillis + "ms");
+                System.out.println("[DELAY QUEUE] Mensagem liberada apÛs " + delayMillis + "ms");
             }, delayMillis, TimeUnit.MILLISECONDS);
 
             pendingTasks.offer(task);
         }
 
         /**
-         * Modifica o valor do atraso padr√£o deste canal de comunica√ß√£o.
+         * Modifica o valor do atraso padr„o deste canal de comunicaÁ„o.
          *  @param delayMillis Novo valor em milissegundos.
          */
         public void setDefaultDelay(long delayMillis) {
@@ -91,7 +91,7 @@ public class DelayQueue {
         }
 
         /**
-         * Obt√©m o valor do atraso padr√£o deste canal de comunica√ß√£o.
+         * ObtÈm o valor do atraso padr„o deste canal de comunicaÁ„o.
          *  @return O atraso configurado em milissegundos.
          */
         public long getDefaultDelay() {
@@ -100,8 +100,8 @@ public class DelayQueue {
 
         /**
          * Encerra as atividades do agendador deste peer de forma limpa.
-         * Cancela preventivamente todas as mensagens que estavam retidas e aguardando libera√ß√£o
-         * e desativa o pool de execu√ß√£o associado.
+         * Cancela preventivamente todas as mensagens que estavam retidas e aguardando liberaÁ„o
+         * e desativa o pool de execuÁ„o associado.
          */
         public void shutdown() {
             for (ScheduledFuture<?> task : pendingTasks) {
@@ -113,7 +113,7 @@ public class DelayQueue {
 
     /**
      * Realiza o desligamento em cascata de todas as filas de atraso ativas no sistema.
-     * Deve ser invocado no encerramento da aplica√ß√£o para liberar recursos de threads abertas.
+     * Deve ser invocado no encerramento da aplicaÁ„o para liberar recursos de threads abertas.
      */
     public void shutdown() {
         peerQueues.values().forEach(DelayedMessageQueue::shutdown);

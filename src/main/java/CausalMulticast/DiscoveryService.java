@@ -5,10 +5,10 @@ import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Servi√ßo de Descoberta din√¢mica de membros do grupo baseado em IP Multicast.
- * Executa de forma cont√≠nua em threads separadas para anunciar a presen√ßa do n√≥ local
- * (atrav√©s de batimentos card√≠acos/heartbeats peri√≥dicos) e para escutar an√∫ncios de outros n√≥s,
- * permitindo a atualiza√ß√£o em tempo real do grupo de computa√ß√£o cooperativa.
+ * ServiÁo de Descoberta din‚mica de membros do grupo baseado em IP Multicast.
+ * Executa de forma contÌnua em threads separadas para anunciar a presenÁa do nÛ local
+ * (atravÈs de batimentos cardÌacos/heartbeats periÛdicos) e para escutar an˙ncios de outros nÛs,
+ * permitindo a atualizaÁ„o em tempo real do grupo de computaÁ„o cooperativa.
  *  @author -
  * @version 1.0
  */
@@ -27,10 +27,10 @@ public class DiscoveryService implements Runnable {
     private NetworkInterface networkInterface;
 
     /**
-     * Construtor para o servi√ßo de descoberta din√¢mica de peers.
-     *  @param localId Identificador √∫nico do n√≥ local (normalmente no formato "IP:Porta").
+     * Construtor para o serviÁo de descoberta din‚mica de peers.
+     *  @param localId Identificador ˙nico do nÛ local (normalmente no formato "IP:Porta").
      * @param localPort Porta de rede local alocada para o middleware.
-     * @param causalMulticast Refer√™ncia do motor central de ordena√ß√£o causal.
+     * @param causalMulticast ReferÍncia do motor central de ordenaÁ„o causal.
      */
     public DiscoveryService(String localId, int localPort, CausalMulticast causalMulticast) {
         this.localId = localId;
@@ -46,7 +46,7 @@ public class DiscoveryService implements Runnable {
                 this.networkInterface = NetworkInterface.getByName("lo");
             }
         } catch (Exception e) {
-            System.err.println("[DISCOVERY] N√£o foi poss√≠vel mapear a placa de rede: " + e.getMessage());
+            System.err.println("[DISCOVERY] N„o foi possÌvel mapear a placa de rede: " + e.getMessage());
         }
     }
 
@@ -97,19 +97,19 @@ public class DiscoveryService implements Runnable {
 
     private void runHeartbeatReceiver() {
         try {
-            // Cria o socket Multicast atrelado √† porta do grupo
+            // Cria o socket Multicast atrelado ‡ porta do grupo
             MulticastSocket socket = new MulticastSocket(MULTICAST_PORT);
             socket.setReuseAddress(true);
             socket.setSoTimeout(2000);
 
-            // Criamos a estrutura de endere√ßo moderna (IP do grupo + Porta)
+            // Criamos a estrutura de endereÁo moderna (IP do grupo + Porta)
             SocketAddress groupAddress = new InetSocketAddress(InetAddress.getByName(MULTICAST_GROUP), MULTICAST_PORT);
 
-            // CORRE√á√ÉO MODERNA: Entra no grupo informando explicitamente qual placa de rede usar
+            // CORRE«√O MODERNA: Entra no grupo informando explicitamente qual placa de rede usar
             if (this.networkInterface != null) {
                 socket.joinGroup(groupAddress, this.networkInterface);
             } else {
-                // Caso extremo onde n√£o foi mapeada, tenta o padr√£o do sistema (pode falhar se houver VPN)
+                // Caso extremo onde n„o foi mapeada, tenta o padr„o do sistema (pode falhar se houver VPN)
                 socket.joinGroup(new InetSocketAddress(InetAddress.getByName(MULTICAST_GROUP), 0), null);
             }
 
@@ -127,7 +127,7 @@ public class DiscoveryService implements Runnable {
                     if (message.startsWith("PEER:")) {
                         String peerId = message.substring(5);
 
-                        // Como removemos o loopbackMode depreciado, filtramos n√≥s mesmos de forma l√≥gica aqui:
+                        // Como removemos o loopbackMode depreciado, filtramos nÛs mesmos de forma lÛgica aqui:
                         if (!peerId.equals(this.localId) && !discoveredPeers.contains(peerId)) {
                             discoveredPeers.add(peerId);
                             System.out.println("[DISCOVERY] Novo peer descoberto: " + peerId);
@@ -138,11 +138,11 @@ public class DiscoveryService implements Runnable {
                         }
                     }
                 } catch (SocketTimeoutException e) {
-                    continue; // Timeout controlado para verificar se 'running' ainda √© true
+                    continue; // Timeout controlado para verificar se 'running' ainda È true
                 }
             }
 
-            // CORRE√á√ÉO MODERNA: Sai do grupo explicitamente usando a mesma assinatura
+            // CORRE«√O MODERNA: Sai do grupo explicitamente usando a mesma assinatura
             try {
                 socket.leaveGroup(groupAddress, this.networkInterface);
             } catch (Exception e) {
@@ -155,14 +155,14 @@ public class DiscoveryService implements Runnable {
     }
 
     /**
-     * Solicita a interrup√ß√£o segura e limpa de todas as tarefas de background do servi√ßo.
+     * Solicita a interrupÁ„o segura e limpa de todas as tarefas de background do serviÁo.
      */
     public void stop() {
         running = false;
     }
 
     /**
-     * Fornece uma c√≥pia isolada e thread-safe contendo a lista de todos os peers
+     * Fornece uma cÛpia isolada e thread-safe contendo a lista de todos os peers
      * remotos descobertos dinamicamente na rede.
      *  @return Uma {@link List} contendo as strings identificadoras dos peers ativos.
      */

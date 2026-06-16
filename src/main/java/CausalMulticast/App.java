@@ -7,38 +7,38 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Interface de Console Interativa e Ponto de Entrada (Application Node) do sistema.
  * Implementa a interface {@link ICausalMulticast} para atuar como o cliente que
  * consome as mensagens entregues de forma ordenada pelo middleware. Gerencia o ciclo
- * de vida dos servi√ßos de rede subjacentes (Descoberta, Envio e Recep√ß√£o).
+ * de vida dos serviÁos de rede subjacentes (Descoberta, Envio e RecepÁ„o).
  *  @author Seu Nome
  * @version 1.0
  */
 public class App implements ICausalMulticast {
 
-    /** Inst√¢ncia principal do middleware de ordena√ß√£o causal associada a este n√≥. */
+    /** Inst‚ncia principal do middleware de ordenaÁ„o causal associada a este nÛ. */
     private CausalMulticast causalMulticast;
 
-    /** Estrutura respons√°vel pela simula√ß√£o de atraso artificial na entrega de pacotes de rede. */
+    /** Estrutura respons·vel pela simulaÁ„o de atraso artificial na entrega de pacotes de rede. */
     private DelayQueue delayQueue;
 
-    /** Servi√ßo peri√≥dico baseado em Multicast UDP para an√∫ncio e descoberta autom√°tica de peers na rede local. */
+    /** ServiÁo periÛdico baseado em Multicast UDP para an˙ncio e descoberta autom·tica de peers na rede local. */
     private DiscoveryService discoveryService;
 
-    /** Thread encarregada de escutar a porta UDP local de forma ininterrupta para receber mensagens f√≠sicas. */
+    /** Thread encarregada de escutar a porta UDP local de forma ininterrupta para receber mensagens fÌsicas. */
     private UDPReceiver udpReceiver;
 
-    /** Identificador exclusivo formatado para o n√≥ local no padr√£o "IP:Porta". */
+    /** Identificador exclusivo formatado para o nÛ local no padr„o "IP:Porta". */
     private String localId;
 
-    /** Porta de comunica√ß√£o Unicast UDP configurada para este processo. */
+    /** Porta de comunicaÁ„o Unicast UDP configurada para este processo. */
     private int localPort;
 
-    /** Lista segura para threads que mant√©m o hist√≥rico de strings j√° entregues em ordem l√≥gica e exibidas na console. */
+    /** Lista segura para threads que mantÈm o histÛrico de strings j· entregues em ordem lÛgica e exibidas na console. */
     private final List<String> deliveredMessages = new CopyOnWriteArrayList<>();
 
     /**
-     * Ponto de entrada padr√£o da aplica√ß√£o (Main Method).
-     * Solicita as configura√ß√µes de rede iniciais via console, instancia o n√≥ do sistema,
-     * inicializa os daemons em background e aciona o la√ßo do menu interativo.
-     *  @param args Argumentos de linha de comando (n√£o utilizados).
+     * Ponto de entrada padr„o da aplicaÁ„o (Main Method).
+     * Solicita as configuraÁıes de rede iniciais via console, instancia o nÛ do sistema,
+     * inicializa os daemons em background e aciona o laÁo do menu interativo.
+     *  @param args Argumentos de linha de comando (n„o utilizados).
      */
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
@@ -56,11 +56,11 @@ public class App implements ICausalMulticast {
     }
 
     /**
-     * Construtor da Aplica√ß√£o Cliente.
-     * Mapeia os dados do n√≥ local e realiza a instancia√ß√£o acoplada do middleware
+     * Construtor da AplicaÁ„o Cliente.
+     * Mapeia os dados do nÛ local e realiza a instanciaÁ„o acoplada do middleware
      * injetando a si mesmo como o receptor final das mensagens ordenadas causais.
-     *  @param ip Endere√ßo IP local que ser√° associado ao n√≥.
-     * @param port Porta de comunica√ß√£o local que ser√° aberta para o n√≥.
+     *  @param ip EndereÁo IP local que ser· associado ao nÛ.
+     * @param port Porta de comunicaÁ„o local que ser· aberta para o nÛ.
      */
     public App(String ip, int port) {
         this.localId = ip + ":" + port;
@@ -70,9 +70,9 @@ public class App implements ICausalMulticast {
     }
 
     /**
-     * Inicializa os servi√ßos de rede executados concorrentemente.
-     * Instancia e dispara as threads ass√≠ncronas do {@link UDPReceiver} e do
-     * {@link DiscoveryService} configurando-as para manter a execu√ß√£o ativa do sistema.
+     * Inicializa os serviÁos de rede executados concorrentemente.
+     * Instancia e dispara as threads assÌncronas do {@link UDPReceiver} e do
+     * {@link DiscoveryService} configurando-as para manter a execuÁ„o ativa do sistema.
      */
     public void start() {
         try {
@@ -98,8 +98,8 @@ public class App implements ICausalMulticast {
     }
 
     /**
-     * Loop principal que exibe e gerencia o menu de linha de comando interativo do n√≥.
-     *  @param scanner O leitor de entrada padr√£o do sistema associado √† console.
+     * Loop principal que exibe e gerencia o menu de linha de comando interativo do nÛ.
+     *  @param scanner O leitor de entrada padr„o do sistema associado ‡ console.
      */
     private void runInteractiveMenu(Scanner scanner) {
         boolean running = true;
@@ -107,13 +107,13 @@ public class App implements ICausalMulticast {
         while (running) {
             System.out.println("\n===== MENU =====");
             System.out.println("1. Enviar mensagem");
-            System.out.println("2. Ver matriz de rel√≥gios");
+            System.out.println("2. Ver matriz de relÛgios");
             System.out.println("3. Ver buffer de mensagens");
             System.out.println("4. Configurar atraso de peer");
             System.out.println("5. Ver mensagens entregues");
             System.out.println("6. Ver peers descobertos");
             System.out.println("7. Sair");
-            System.out.print("Escolha uma op√ß√£o: ");
+            System.out.print("Escolha uma opÁ„o: ");
 
             String choice = scanner.nextLine().trim();
 
@@ -141,7 +141,7 @@ public class App implements ICausalMulticast {
                     shutdown();
                     break;
                 default:
-                    System.out.println("Op√ß√£o inv√°lida!");
+                    System.out.println("OpÁ„o inv·lida!");
             }
         }
 
@@ -150,8 +150,8 @@ public class App implements ICausalMulticast {
 
     /**
      * Captura uma mensagem em texto digitada pelo operador na console e repassa
-     * para o m√©todo {@code mcsend} do middleware para propaga√ß√£o confi√°vel e causal.
-     *  @param scanner O leitor de entrada padr√£o associado √† console.
+     * para o mÈtodo {@code mcsend} do middleware para propagaÁ„o confi·vel e causal.
+     *  @param scanner O leitor de entrada padr„o associado ‡ console.
      */
     private void sendMessage(Scanner scanner) {
         System.out.print("Digite a mensagem: ");
@@ -164,16 +164,16 @@ public class App implements ICausalMulticast {
     }
 
     /**
-     * Imprime na sa√≠da padr√£o a tabela textual formatada correspondente ao
-     * estado atual de conhecimento global mantido pela Matriz de Rel√≥gios do middleware.
+     * Imprime na saÌda padr„o a tabela textual formatada correspondente ao
+     * estado atual de conhecimento global mantido pela Matriz de RelÛgios do middleware.
      */
     private void viewMatrixClock() {
         System.out.println(causalMulticast.getMatrixClockState());
     }
 
     /**
-     * Imprime na sa√≠da padr√£o a lista de mensagens recebidas que ainda encontram-se
-     * represadas no buffer do middleware aguardando sua valida√ß√£o causal ou estabiliza√ß√£o.
+     * Imprime na saÌda padr„o a lista de mensagens recebidas que ainda encontram-se
+     * represadas no buffer do middleware aguardando sua validaÁ„o causal ou estabilizaÁ„o.
      */
     private void viewMessageBuffer() {
         System.out.println(causalMulticast.getBufferState());
@@ -181,8 +181,8 @@ public class App implements ICausalMulticast {
 
     /**
      * Permite ao operador selecionar um dos peers descobertos automaticamente e configurar
-     * um tempo de reten√ß√£o artificial (atraso de rede em ms) para os pacotes oriundos dele.
-     *  @param scanner O leitor de entrada padr√£o associado √† console.
+     * um tempo de retenÁ„o artificial (atraso de rede em ms) para os pacotes oriundos dele.
+     *  @param scanner O leitor de entrada padr„o associado ‡ console.
      */
     private void configurePeerDelay(Scanner scanner) {
         System.out.println("\nPeers conhecidos:");
@@ -191,7 +191,7 @@ public class App implements ICausalMulticast {
             System.out.println((i + 1) + ". " + peers.get(i));
         }
 
-        System.out.print("Escolha o n√∫mero do peer: ");
+        System.out.print("Escolha o n˙mero do peer: ");
         int peerIndex = Integer.parseInt(scanner.nextLine().trim()) - 1;
 
         if (peerIndex >= 0 && peerIndex < peers.size()) {
@@ -202,13 +202,13 @@ public class App implements ICausalMulticast {
             delayQueue.setPeerDelay(peerId, delay);
             System.out.println("[APP] Atraso configurado: " + delay + "ms para " + peerId);
         } else {
-            System.out.println("Peer inv√°lido!");
+            System.out.println("Peer inv·lido!");
         }
     }
 
     /**
-     * Imprime na console todo o hist√≥rico de mensagens de texto limpas que o algoritmo causal
-     * j√° validou, ordenou e liberou com sucesso para a aplica√ß√£o.
+     * Imprime na console todo o histÛrico de mensagens de texto limpas que o algoritmo causal
+     * j· validou, ordenou e liberou com sucesso para a aplicaÁ„o.
      */
     private void viewDeliveredMessages() {
         System.out.println("\n===== MENSAGENS ENTREGUES =====");
@@ -222,7 +222,7 @@ public class App implements ICausalMulticast {
     }
 
     /**
-     * Exibe na console os endere√ßos de rede dos peers externos e ativos descobertos na rede local
+     * Exibe na console os endereÁos de rede dos peers externos e ativos descobertos na rede local
      * pelo {@link DiscoveryService}.
      */
     private void viewDiscoveredPeers() {
@@ -238,9 +238,9 @@ public class App implements ICausalMulticast {
     }
 
     /**
-     * Realiza o desligamento limpo e ordenado do n√≥ local.
-     * Encerra os loops dos sockets receptores e de descoberta, al√©m de desligar os
-     * pools de agendamento de tarefas da fila de atrasos para evitar vazamentos de mem√≥ria.
+     * Realiza o desligamento limpo e ordenado do nÛ local.
+     * Encerra os loops dos sockets receptores e de descoberta, alÈm de desligar os
+     * pools de agendamento de tarefas da fila de atrasos para evitar vazamentos de memÛria.
      */
     private void shutdown() {
         System.out.println("\n[APP] Encerrando sistema...");
@@ -258,10 +258,10 @@ public class App implements ICausalMulticast {
     }
 
     /**
-     * Implementa√ß√£o do m√©todo de callback do contrato {@link ICausalMulticast}.
-     * Este m√©todo √© invocado assincronamente pela camada do middleware assim que uma
-     * mensagem atende a todos os crit√©rios de preced√™ncia causal, registrando o timestamp de libera√ß√£o.
-     *  @param msg Conte√∫do textual puro da mensagem que foi validada e entregue.
+     * ImplementaÁ„o do mÈtodo de callback do contrato {@link ICausalMulticast}.
+     * Este mÈtodo È invocado assincronamente pela camada do middleware assim que uma
+     * mensagem atende a todos os critÈrios de precedÍncia causal, registrando o timestamp de liberaÁ„o.
+     *  @param msg Conte˙do textual puro da mensagem que foi validada e entregue.
      */
     @Override
     public void deliver(String msg) {

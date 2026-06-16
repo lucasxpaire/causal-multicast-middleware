@@ -3,32 +3,32 @@ package CausalMulticast;
 import java.util.Map;
 
 /**
- * Representa o envelope estruturado de uma mensagem encapsulada no nÃ­vel do middleware.
- * Transporta o payload textual puro fornecido pela aplicaÃ§Ã£o cliente juntamente com os
- * metadados de controle necessÃ¡rios para garantir a ordenaÃ§Ã£o causal e a estabilizaÃ§Ã£o global
- * (identificaÃ§Ã£o do nÃ³ remetente e o estado de seu relÃ³gio vetorial).
+ * Representa o envelope estruturado de uma mensagem encapsulada no nível do middleware.
+ * Transporta o payload textual puro fornecido pela aplicação cliente juntamente com os
+ * metadados de controle necessários para garantir a ordenação causal e a estabilização global
+ * (identificação do nó remetente e o estado de seu relógio vetorial).
  */
 public class BufferedMessage {
 
-    /** O conteÃºdo ou carga Ãºtil (payload) em texto puro transmitido pela mensagem. */
+    /** O conteúdo ou carga útil (payload) em texto puro transmitido pela mensagem. */
     private final String content;
 
-    /** O identificador exclusivo do nÃ³ que originou e enviou a mensagem, formatado como "IP:Porta". */
+    /** O identificador exclusivo do nó que originou e enviou a mensagem, formatado como "IP:Porta". */
     private final String senderId;
 
-    /** O carimbo de data/hora lÃ³gico (RelÃ³gio Vetorial) capturado no nÃ³ remetente no instante exato do envio. */
+    /** O carimbo de data/hora lógico (Relógio Vetorial) capturado no nó remetente no instante exato do envio. */
     private final Map<String, Integer> vectorClock;
 
-    /** Flag de controle indicando se esta mensagem especÃ­fica jÃ¡ foi validada e entregue Ã  aplicaÃ§Ã£o local. */
+    /** Flag de controle indicando se esta mensagem específica já foi validada e entregue à aplicação local. */
     private boolean delivered;
 
     /**
      * Construtor para inicializar uma mensagem no middleware.
-     * Define o estado inicial da mensagem marcando-a preventivamente como nÃ£o entregue.
+     * Define o estado inicial da mensagem marcando-a preventivamente como não entregue.
      *
-     * @param content ConteÃºdo textual puro da mensagem.
-     * @param senderId Identificador Ãºnico do remetente (IP:Porta).
-     * @param vectorClock RelÃ³gio vetorial do remetente no momento do envio.
+     * @param content Conteúdo textual puro da mensagem.
+     * @param senderId Identificador único do remetente (IP:Porta).
+     * @param vectorClock Relógio vetorial do remetente no momento do envio.
      */
     public BufferedMessage(String content, String senderId, Map<String, Integer> vectorClock) {
         this.content = content;
@@ -38,7 +38,7 @@ public class BufferedMessage {
     }
 
     /**
-     * Retorna o conteÃºdo textual bruto armazenado no payload da mensagem.
+     * Retorna o conteúdo textual bruto armazenado no payload da mensagem.
      *
      * @return O texto contido na mensagem.
      */
@@ -47,7 +47,7 @@ public class BufferedMessage {
     }
 
     /**
-     * Retorna o identificador de rede do nÃ³ responsÃ¡vel pela criaÃ§Ã£o e transmissÃ£o original da mensagem.
+     * Retorna o identificador de rede do nó responsável pela criação e transmissão original da mensagem.
      *
      * @return O ID do remetente no formato "IP:Porta".
      */
@@ -56,27 +56,27 @@ public class BufferedMessage {
     }
 
     /**
-     * Retorna o RelÃ³gio Vetorial (mapa de IDs para contadores lÃ³gicos) associado a esta mensagem.
-     * Representa o estado de causalidade capturado no momento da emissÃ£o.
+     * Retorna o Relógio Vetorial (mapa de IDs para contadores lógicos) associado a esta mensagem.
+     * Representa o estado de causalidade capturado no momento da emissão.
      *
-     * @return O mapa representando o carimbo do relÃ³gio vetorial.
+     * @return O mapa representando o carimbo do relógio vetorial.
      */
     public Map<String, Integer> getVectorClock() {
         return vectorClock;
     }
 
     /**
-     * Verifica se a mensagem jÃ¡ passou pelo algoritmo de validaÃ§Ã£o causal e foi
-     * liberada com sucesso para exibiÃ§Ã£o/consumo na camada da aplicaÃ§Ã£o cliente.
+     * Verifica se a mensagem já passou pelo algoritmo de validação causal e foi
+     * liberada com sucesso para exibição/consumo na camada da aplicação cliente.
      *
-     * @return {@code true} se a mensagem jÃ¡ tiver sido entregue; {@code false} caso contrÃ¡rio.
+     * @return {@code true} se a mensagem já tiver sido entregue; {@code false} caso contrário.
      */
     public boolean isDelivered() {
         return delivered;
     }
 
     /**
-     * Altera o estado de entrega da mensagem no middleware apÃ³s a validaÃ§Ã£o bem-sucedida das regras causais.
+     * Altera o estado de entrega da mensagem no middleware após a validação bem-sucedida das regras causais.
      *
      * @param delivered O novo estado de entrega para marcar a mensagem (normalmente {@code true}).
      */

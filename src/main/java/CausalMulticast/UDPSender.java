@@ -7,20 +7,20 @@ import java.net.InetAddress;
 
 /**
  * Emissor de dados baseado em sockets Unicast UDP.
- * Esta classe encapsula as opera√ß√µes de rede de baixo n√≠vel necess√°rias para despachar
- * inst√¢ncias de {@link BufferedMessage} para destinos espec√≠ficos na rede. O objeto √©
- * convertido em array de bytes via {@link MessageSerializer} antes do encapsulamento f√≠sico
+ * Esta classe encapsula as operaÁıes de rede de baixo nÌvel necess·rias para despachar
+ * inst‚ncias de {@link BufferedMessage} para destinos especÌficos na rede. O objeto È
+ * convertido em array de bytes via {@link MessageSerializer} antes do encapsulamento fÌsico
  * no datagrama.
  *  @author Seu Nome
  * @version 1.0
  */
 public class UDPSender {
 
-    /** O socket Datagram nativo do Java utilizado para a sa√≠da de pacotes de dados. */
+    /** O socket Datagram nativo do Java utilizado para a saÌda de pacotes de dados. */
     private DatagramSocket socket;
 
     /**
-     * Construtor padr√£o do emissor UDP.
+     * Construtor padr„o do emissor UDP.
      * Inicializa um novo socket de datagrama alocado automaticamente em uma porta livre
      * pelo sistema operacional.
      *  @throws IOException Se ocorrer um erro de E/S ao abrir ou inicializar o socket.
@@ -30,11 +30,11 @@ public class UDPSender {
     }
 
     /**
-     * Transmite uma mensagem encapsulada para um n√≥ remoto espec√≠fico utilizando o protocolo UDP.
-     * Transforma o objeto estruturado em um fluxo bin√°rio e realiza o endere√ßamento IP/Porta.
-     *  @param receiverAddress O endere√ßo IP ou Hostname de destino (ex: "192.168.1.101").
-     * @param receiverPort A porta l√≥gica do socket receptor no n√≥ de destino.
-     * @param message A inst√¢ncia da mensagem contendo o payload e os rel√≥gios causais.
+     * Transmite uma mensagem encapsulada para um nÛ remoto especÌfico utilizando o protocolo UDP.
+     * Transforma o objeto estruturado em um fluxo bin·rio e realiza o endereÁamento IP/Porta.
+     *  @param receiverAddress O endereÁo IP ou Hostname de destino (ex: "192.168.1.101").
+     * @param receiverPort A porta lÛgica do socket receptor no nÛ de destino.
+     * @param message A inst‚ncia da mensagem contendo o payload e os relÛgios causais.
      */
     public void sendMessage(String receiverAddress, int receiverPort, BufferedMessage message) {
         try {
@@ -44,10 +44,10 @@ public class UDPSender {
             // Resolve o hostname/IP textual fornecido em um objeto InetAddress nativo do Java
             InetAddress address = InetAddress.getByName(receiverAddress);
 
-            // Monta o pacote de dados UDP encapsulando o buffer bin√°rio e os metadados de destino
+            // Monta o pacote de dados UDP encapsulando o buffer bin·rio e os metadados de destino
             DatagramPacket packet = new DatagramPacket(data, data.length, address, receiverPort);
 
-            // Despacha o pacote de forma ass√≠ncrona (n√£o-confi√°vel por padr√£o do protocolo) para a rede
+            // Despacha o pacote de forma assÌncrona (n„o-confi·vel por padr„o do protocolo) para a rede
             socket.send(packet);
             System.out.println("[UDP] Mensagem enviada para " + receiverAddress + ":" + receiverPort);
         } catch (Exception e) {
@@ -57,8 +57,8 @@ public class UDPSender {
 
     /**
      * Fecha e libera o socket UDP subjacente.
-     * Interrompe qualquer aloca√ß√£o de canal pendente no sistema operacional. Deve ser
-     * acionado durante os procedimentos de desligamento controlado da aplica√ß√£o.
+     * Interrompe qualquer alocaÁ„o de canal pendente no sistema operacional. Deve ser
+     * acionado durante os procedimentos de desligamento controlado da aplicaÁ„o.
      */
     public void close() {
         if (socket != null && !socket.isClosed()) {
