@@ -2,6 +2,9 @@ package CausalMulticast;
 
 import java.util.Map;
 
+/**
+ * Representa o envelope de uma mensagem, contendo o texto e os metadados causais.
+ */
 public class BufferedMessage {
 
     private final String content;
@@ -10,6 +13,13 @@ public class BufferedMessage {
     private boolean delivered;
     private int sequenceNumber;
 
+    /**
+     * Construtor para inicializar uma mensagem no middleware.
+     *
+     * @param content Conteúdo textual da mensagem.
+     * @param senderId Identificador único do remetente (IP:Porta).
+     * @param vectorClock Relógio vetorial do remetente no momento do envio.
+     */
     public BufferedMessage(String content, String senderId, Map<String, Integer> vectorClock) {
         this.content = content;
         this.senderId = senderId;

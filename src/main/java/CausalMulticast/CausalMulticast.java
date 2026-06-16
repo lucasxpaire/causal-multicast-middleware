@@ -14,6 +14,13 @@ public class CausalMulticast {
     private final List<BufferedMessage> messageBuffer;
     private int localMessagesDelivered = 0;
 
+    /**
+     * Inicializa o middleware de multicast causal para o nó local.
+     * 
+     * @param ip IP unicast local.
+     * @param port Porta unicast local.
+     * @param client Referência de retorno da aplicação cliente.
+     */
     public CausalMulticast(String ip, Integer port, ICausalMulticast client) {
         this.localId = ip + ":" + port;
         this.client = client;
@@ -23,6 +30,11 @@ public class CausalMulticast {
         this.updateGroupMembers(List.of(this.localId));
     }
 
+    /**
+     * Atualiza os membros do grupo e redimensiona a matriz de relógios preservando o histórico.
+     * 
+     * @param newPeers Nova lista de membros ativos.
+     */
     public synchronized void updateGroupMembers(List<String> newPeers) {
         List<String> sortedPeers = new ArrayList<>(newPeers);
         if (!sortedPeers.contains(localId)) {
@@ -63,6 +75,12 @@ public class CausalMulticast {
         this.matrixClock = newMatrixClock;
     }
 
+    /**
+     * Envia uma mensagem multicast para o grupo garantindo a ordenação causal.
+     * 
+     * @param msg Texto da mensagem a ser enviada.
+     * @param cliente Referência de callback do cliente.
+     */
     public void mcsend(String msg, ICausalMulticast cliente) {
         Integer localPeerIdx = this.peerToIndex.get(this.localId);
         if (localPeerIdx == null) {
@@ -94,6 +112,11 @@ public class CausalMulticast {
         // TODO: implementar a transmissão UDP
     }
 
+    /**
+     * Processa uma mensagem vinda da rede, aplicando ordenamento causal e estabilização.
+     * 
+     * @param message A mensagem recebida da rede.
+     */
     public void onMessageReceived(BufferedMessage message) {
         String senderId = message.getSenderId();
 
@@ -125,7 +148,6 @@ public class CausalMulticast {
 
             this.messageBuffer.add(message);
 
-            // 4. Loop de Entrega Causal (Deliver Scan)
             boolean newDelivery;
             do {
                 newDelivery = false;
@@ -200,6 +222,11 @@ public class CausalMulticast {
         }
     }
 
+    /**
+     * Retorna a matriz de relógios lógicos formatada em texto.
+     * 
+     * @return Tabela de relógios lógicos.
+     */
     public synchronized String getMatrixClockState() {
         StringBuilder sb = new StringBuilder();
         sb.append("\n=================== MATRIZ DE RELÓGIOS ===================\n");
@@ -225,6 +252,11 @@ public class CausalMulticast {
         return sb.toString();
     }
 
+    /**
+     * Retorna a fila de mensagens do buffer formatada em texto.
+     * 
+     * @return Fila de mensagens em espera.
+     */
     public synchronized String getBufferState() {
         StringBuilder sb = new StringBuilder();
         sb.append("\n================== BUFFER DE MENSAGENS ==================\n");
