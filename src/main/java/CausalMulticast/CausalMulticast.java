@@ -82,17 +82,18 @@ public class CausalMulticast {
      * @param cliente Referência de callback do cliente.
      */
     public void mcsend(String msg, ICausalMulticast cliente) {
-        Integer localPeerIdx = this.peerToIndex.get(this.localId);
-        if (localPeerIdx == null) {
+        Integer localPeerIndex = this.peerToIndex.get(this.localId);
+        if (localPeerIndex == null) {
             return;
         }
 
         Map<String, Integer> currentVectorClock = new ConcurrentHashMap<>();
         synchronized (this) {
+            // Copia o relógio local atual para anexar na mensagem
             for (String peer : this.activePeers) {
-                Integer peerIdx = this.peerToIndex.get(peer);
-                if (peerIdx != null) {
-                    currentVectorClock.put(peer, this.matrixClock[localPeerIdx][peerIdx]);
+                Integer peerIndex = this.peerToIndex.get(peer);
+                if (peerIndex != null) {
+                    currentVectorClock.put(peer, this.matrixClock[localPeerIndex][peerIndex]);
                 }
             }
         }
@@ -101,9 +102,10 @@ public class CausalMulticast {
         sendToGroup(message);
 
         synchronized (this) {
-            localPeerIdx = this.peerToIndex.get(this.localId);
-            if (localPeerIdx != null) {
-                this.matrixClock[localPeerIdx][localPeerIdx] = this.matrixClock[localPeerIdx][localPeerIdx] + 1;
+            localPeerIndex = this.peerToIndex.get(this.localId);
+            if (localPeerIndex != null) {
+                // Incrementa a própria posição do relógio local pós-envio
+                this.matrixClock[localPeerIndex][localPeerIndex] = this.matrixClock[localPeerIndex][localPeerIndex] + 1;
             }
         }
     }
@@ -121,50 +123,56 @@ public class CausalMulticast {
         String senderId = message.getSenderId();
 
         synchronized (this) {
-            Integer senderIdx = this.peerToIndex.get(senderId);
-            Integer localPeerIdx = this.peerToIndex.get(this.localId);
+            Integer senderIndex = this.peerToIndex.get(senderId);
+            Integer localPeerIndex = this.peerToIndex.get(this.localId);
 
-            if (senderIdx == null || localPeerIdx == null) {
+            if (senderIndex == null || localPeerIndex == null) {
                 return;
             }
 
-            int msgSeq = message.getVectorClock().getOrDefault(senderId, 0);
+            // 1. Filtro de Mensagens Duplicadas
+            int messageSeqNumber = message.getVectorClock().getOrDefault(senderId, 0);
             int deliveredCount;
             if (senderId.equals(this.localId)) {
                 deliveredCount = this.localMessagesDelivered;
             } else {
-                deliveredCount = this.matrixClock[localPeerIdx][senderIdx];
+                deliveredCount = this.matrixClock[localPeerIndex][senderIndex];
             }
-            if (msgSeq < deliveredCount) {
+            if (messageSeqNumber < deliveredCount) {
                 return;
             }
 
+            // 2. Atualiza a linha da matriz do remetente com o relógio que veio na mensagem
             for (String peer : this.activePeers) {
-                Integer colIdx = this.peerToIndex.get(peer);
-                if (colIdx != null) {
-                    this.matrixClock[senderIdx][colIdx] = message.getVectorClock().getOrDefault(peer, 0);
+                Integer colIndex = this.peerToIndex.get(peer);
+                if (colIndex != null) {
+                    int peerClockValue = message.getVectorClock().getOrDefault(peer, 0);
+                    this.matrixClock[senderIndex][colIndex] = peerClockValue;
                 }
             }
 
+            // 3. Insere a mensagem no buffer de espera
             this.messageBuffer.add(message);
 
+            // 4. Verifica se a mensagem pode ser entregue à aplicação
             boolean newDelivery;
             do {
                 newDelivery = false;
                 for (BufferedMessage bufferedMsg : this.messageBuffer) {
                     if (!bufferedMsg.isDelivered()) {
                         String msgSender = bufferedMsg.getSenderId();
-                        Integer msgSenderIdx = this.peerToIndex.get(msgSender);
+                        Integer msgSenderIndex = this.peerToIndex.get(msgSender);
 
-                        if (msgSenderIdx != null) {
+                        if (msgSenderIndex != null) {
+                            // Verifica se todas as mensagens causais precedentes já foram entregues
                             boolean canDeliver = true;
                             for (String peer : this.activePeers) {
-                                Integer peerIdx = this.peerToIndex.get(peer);
-                                if (peerIdx != null) {
-                                    int msgClockVal = bufferedMsg.getVectorClock().getOrDefault(peer, 0);
-                                    int localClockVal = this.matrixClock[localPeerIdx][peerIdx];
+                                Integer peerIndex = this.peerToIndex.get(peer);
+                                if (peerIndex != null) {
+                                    int messageClockValue = bufferedMsg.getVectorClock().getOrDefault(peer, 0);
+                                    int localClockValue = this.matrixClock[localPeerIndex][peerIndex];
 
-                                    if (msgClockVal > localClockVal) {
+                                    if (messageClockValue > localClockValue) {
                                         canDeliver = false;
                                         break;
                                     }
@@ -177,7 +185,7 @@ public class CausalMulticast {
                                 if (msgSender.equals(this.localId)) {
                                     this.localMessagesDelivered++;
                                 } else {
-                                    this.matrixClock[localPeerIdx][msgSenderIdx] = this.matrixClock[localPeerIdx][msgSenderIdx] + 1;
+                                    this.matrixClock[localPeerIndex][msgSenderIndex] = this.matrixClock[localPeerIndex][msgSenderIndex] + 1;
                                 }
 
                                 this.client.deliver(bufferedMsg.getContent());
@@ -190,29 +198,29 @@ public class CausalMulticast {
                 }
             } while (newDelivery);
 
+            // 5. Estabilização e Descarte do Buffer
             List<BufferedMessage> stableMessages = new ArrayList<>();
             for (BufferedMessage bufferedMsg : this.messageBuffer) {
                 if (bufferedMsg.isDelivered()) {
                     String msgSender = bufferedMsg.getSenderId();
-                    Integer msgSenderIdx = this.peerToIndex.get(msgSender);
+                    Integer msgSenderIndex = this.peerToIndex.get(msgSender);
 
-                    if (msgSenderIdx != null) {
-                        int msgSeqNumber = bufferedMsg.getVectorClock().getOrDefault(msgSender, 0);
+                    if (msgSenderIndex != null) {
+                        int msgSeq = bufferedMsg.getVectorClock().getOrDefault(msgSender, 0);
 
-                        // Encontra o menor relógio registrado para este remetente entre  todos do grupo
+                        // Encontra o menor relógio registrado para o remetente entre todos os nós
                         int minReceived = Integer.MAX_VALUE;
                         for (String peer : this.activePeers) {
-                            Integer peerIdx = this.peerToIndex.get(peer);
-                            if (peerIdx != null) {
-                                int val = this.matrixClock[peerIdx][msgSenderIdx];
-                                if (val < minReceived) {
-                                    minReceived = val;
+                            Integer peerIndex = this.peerToIndex.get(peer);
+                            if (peerIndex != null) {
+                                int peerClockValue = this.matrixClock[peerIndex][msgSenderIndex];
+                                if (peerClockValue < minReceived) {
+                                    minReceived = peerClockValue;
                                 }
                             }
                         }
 
-                        // Se todos os nós já receberam pelo menos essa mensagem, ela é estável
-                        if (msgSeqNumber <= minReceived) {
+                        if (msgSeq <= minReceived) {
                             stableMessages.add(bufferedMsg);
                         }
                     }
@@ -274,4 +282,3 @@ public class CausalMulticast {
         return sb.toString();
     }
 }
-
