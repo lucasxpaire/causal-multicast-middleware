@@ -48,9 +48,6 @@ public class App implements ICausalMulticast {
             discoveryThread.setDaemon(false);
             discoveryThread.start();
 
-            // Carregar peers do arquivo peers.conf (fallback se multicast falhar)
-            loadPeersFromConfig();
-
             System.out.println("\n[APP] Sistema iniciado com sucesso!");
             System.out.println("[APP] ID Local: " + localId);
 

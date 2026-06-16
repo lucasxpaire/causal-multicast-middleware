@@ -91,13 +91,14 @@ public class CausalMulticast {
      */
     public void mcsend(String msg, ICausalMulticast cliente) {
         Integer localPeerIndex = this.peerToIndex.get(this.localId);
-        if (localPeerIndex == null) {
-            return;
-        }
+        if (localPeerIndex == null) return;
 
         Map<String, Integer> currentVectorClock = new ConcurrentHashMap<>();
         synchronized (this) {
-            // Copia o relógio local atual para anexar na mensagem
+            // 1. INCREMENTA ANTES: O nó avança seu relógio local significando um evento de envio
+            this.matrixClock[localPeerIndex][localPeerIndex] = this.matrixClock[localPeerIndex][localPeerIndex] + 1;
+
+            // 2. COPIA O RELÓGIO ATUALIZADO: A mensagem vai carregar o carimbo novo
             for (String peer : this.activePeers) {
                 Integer peerIndex = this.peerToIndex.get(peer);
                 if (peerIndex != null) {
@@ -108,14 +109,6 @@ public class CausalMulticast {
 
         BufferedMessage message = new BufferedMessage(msg, this.localId, currentVectorClock);
         sendToGroup(message);
-
-        synchronized (this) {
-            localPeerIndex = this.peerToIndex.get(this.localId);
-            if (localPeerIndex != null) {
-                // Incrementa a própria posição do relógio local pós-envio
-                this.matrixClock[localPeerIndex][localPeerIndex] = this.matrixClock[localPeerIndex][localPeerIndex] + 1;
-            }
-        }
     }
 
     private void sendToGroup(BufferedMessage message) {
@@ -180,17 +173,26 @@ public class CausalMulticast {
                         Integer msgSenderIndex = this.peerToIndex.get(msgSender);
 
                         if (msgSenderIndex != null) {
-                            // Verifica se todas as mensagens causais precedentes já foram entregues
                             boolean canDeliver = true;
+
                             for (String peer : this.activePeers) {
                                 Integer peerIndex = this.peerToIndex.get(peer);
                                 if (peerIndex != null) {
                                     int messageClockValue = bufferedMsg.getVectorClock().getOrDefault(peer, 0);
                                     int localClockValue = this.matrixClock[localPeerIndex][peerIndex];
 
-                                    if (messageClockValue > localClockValue) {
-                                        canDeliver = false;
-                                        break;
+                                    if (peer.equals(msgSender)) {
+                                        // REGRA 1: Para o remetente, tem que ser exatamente a próxima (local + 1)
+                                        if (messageClockValue != localClockValue + 1) {
+                                            canDeliver = false;
+                                            break;
+                                        }
+                                    } else {
+                                        // REGRA 2: Para os outros, o local tem que estar igual ou mais avançado que a mensagem
+                                        if (messageClockValue > localClockValue) {
+                                            canDeliver = false;
+                                            break;
+                                        }
                                     }
                                 }
                             }
@@ -207,7 +209,7 @@ public class CausalMulticast {
                                 this.client.deliver(bufferedMsg.getContent());
 
                                 newDelivery = true;
-                                break;
+                                break; // Quebra o loop interno para reavaliar o buffer atualizado
                             }
                         }
                     }
