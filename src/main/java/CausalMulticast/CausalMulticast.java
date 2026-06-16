@@ -105,7 +105,7 @@ public class CausalMulticast {
 
     /**
      * Prepara uma mensagem gerando e carimbando os relógios no formato causal.
-     * Atende parte do Requisito 7 delegando o envio e interceptação para a aplicação.
+     * Atende parte do Requisito 7 delegando o envio e interceptacão para a aplicacão.
      * * @param msg Conteúdo textual bruto a ser enviado.
      * @return O envelope estruturado da mensagem gerada.
      */
@@ -334,7 +334,7 @@ public class CausalMulticast {
         return sb.toString();
     }
 
-    /** Retorna a lista de peers ativos para interação na camada de aplicação */
+    /** Retorna a lista de peers ativos para interacão na camada de aplicacão */
     public List<String> getActivePeers() {
         return new ArrayList<>(this.activePeers);
     }

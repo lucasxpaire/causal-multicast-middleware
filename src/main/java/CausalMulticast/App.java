@@ -112,7 +112,7 @@ public class App implements ICausalMulticast {
             System.out.println("4. Configurar atraso de peer");
             System.out.println("5. Ver mensagens entregues");
             System.out.println("6. Ver peers descobertos");
-            System.out.println("7. Enviar mensagens retidas/atrasadas (Emissor) [Req 7]");
+            System.out.println("7. Enviar mensagens retidas/atrasadas (Emissor)");
             System.out.println("8. Sair");
             System.out.print("Escolha uma op��o: ");
 
@@ -127,7 +127,7 @@ public class App implements ICausalMulticast {
                 case "6": viewDiscoveredPeers(); break;
                 case "7": sendPendingOutgoingMessages(); break;
                 case "8": running = false; shutdown(); break;
-                default: System.out.println("Opção inválida!");
+                default: System.out.println("Opcão inválida!");
             }
         }
 
@@ -160,7 +160,6 @@ public class App implements ICausalMulticast {
         String sendAll = scanner.nextLine().trim().toUpperCase();
 
         if (sendAll.equals("S")) {
-            // Caso Sim, envia para todos que não sejam o nó local
             for (String peer : destinations) {
                 if (!peer.equals(causalMulticast.getLocalId())) {
                     causalMulticast.sendUnicastDirect(peer, message);
@@ -178,11 +177,11 @@ public class App implements ICausalMulticast {
                 if (choice.equals("S")) {
                     causalMulticast.sendUnicastDirect(peer, message);
                 } else {
-                    // Retenção física no lado do emissor
+                    // Retencão física no lado do emissor
                     String[] parts = peer.split(":");
                     DelayedPacket delayedPacket = new DelayedPacket(peer, parts[0], Integer.parseInt(parts[1]), message);
                     causalMulticast.getOutgoingDelayedQueue().add(delayedPacket);
-                    System.out.println("[RETENÇÃO] Mensagem para " + peer + " retida fisicamente no emissor.");
+                    System.out.println("[RETENcÃO] Mensagem para " + peer + " retida fisicamente no emissor.");
                 }
             }
         }
@@ -297,7 +296,7 @@ public class App implements ICausalMulticast {
     }
 
     /**
-     * Efetua a liberação e envio físico via rede de pacotes previamente retidos na fila de saída.
+     * Efetua a liberacão e envio físico via rede de pacotes previamente retidos na fila de saída.
      */
     private void sendPendingOutgoingMessages() {
         List<DelayedPacket> pending = causalMulticast.getOutgoingDelayedQueue();
@@ -310,7 +309,7 @@ public class App implements ICausalMulticast {
 
         System.out.println("Disparando " + pending.size() + " pacote(s) retido(s)...");
 
-        // Copia e limpa para evitar concorrência durante a iteração de envio
+        // Copia e limpa para evitar concorrência durante a iteracão de envio
         List<DelayedPacket> toSend = new ArrayList<>(pending);
         pending.clear();
 
