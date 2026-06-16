@@ -13,6 +13,7 @@ public class CausalMulticast {
     private int[][] matrixClock;
     private final List<BufferedMessage> messageBuffer;
     private int localMessagesDelivered = 0;
+    private UDPSender udpSender;
 
     /**
      * Inicializa o middleware de multicast causal para o nó local.
@@ -28,6 +29,13 @@ public class CausalMulticast {
         this.peerToIndex = new ConcurrentHashMap<>();
         this.messageBuffer = Collections.synchronizedList(new ArrayList<BufferedMessage>());
         this.updateGroupMembers(List.of(this.localId));
+
+        try {
+            this.udpSender = new UDPSender();
+        } catch (Exception e) {
+            System.err.println("[MIDDLEWARE ERROR] Falha ao inicializar o UDPSender: " + e.getMessage());
+        }
+
     }
 
     /**
@@ -111,7 +119,15 @@ public class CausalMulticast {
     }
 
     private void sendToGroup(BufferedMessage message) {
-        // TODO: implementar a transmissão UDP
+        for (String peer: this.activePeers){
+            if (!peer.equals(this.localId)){
+                String[] parts = peer.split(":");
+                String ip = parts[0];
+                int port = Integer.parseInt(parts[1]);
+
+                udpSender.sendMessage(ip, port, message);
+            }
+        }
     }
 
     /**
