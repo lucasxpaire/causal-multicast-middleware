@@ -5,41 +5,44 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Componente core do Middleware responsável por gerenciar a entrega causal de mensagens.
- * Utiliza o algoritmo de Matriz de Relógios Lógicos (Matrix Clock) para rastrear o progresso 
- * de conhecimento global de cada nó na rede distribuída e aplicar descarte por estabilização.
+ * Componente core do Middleware responsï¿½vel por gerenciar a entrega causal de mensagens.
+ * Utiliza o algoritmo de Matriz de Relï¿½gios Lï¿½gicos (Matrix Clock) para rastrear o progresso 
+ * de conhecimento global de cada nï¿½ na rede distribuï¿½da e aplicar descarte por estabilizaï¿½ï¿½o.
  */
 public class CausalMulticast {
 
-    /** Identificador único do nó local, formatado como "IP:Porta". */
+    /** Identificador ï¿½nico do nï¿½ local, formatado como "IP:Porta". */
     private final String localId;
     
-    /** Interface de callback para entregar as mensagens ordenadas para a aplicação cliente. */
+    /** Interface de callback para entregar as mensagens ordenadas para a aplicaï¿½ï¿½o cliente. */
     private final ICausalMulticast client;
     
     /** Lista encadeada segura para threads contendo os identificadores de todos os peers ativos no grupo. */
     private final List<String> activePeers;
     
-    /** Mapa que correlaciona o ID textual de um peer (IP:Porta) com seu índice numérico na Matriz de Relógios. */
+    /** Mapa que correlaciona o ID textual de um peer (IP:Porta) com seu ï¿½ndice numï¿½rico na Matriz de Relï¿½gios. */
     private Map<String, Integer> peerToIndex;
     
-    /** Matriz de Relógios Vetoriais de tamanho N x N. Onde matrixClock[i][j] representa o conhecimento que o nó i possui sobre os eventos gerados pelo nó j. */
+    /** Matriz de Relï¿½gios Vetoriais de tamanho N x N. Onde matrixClock[i][j] representa o conhecimento que o nï¿½ i possui sobre os eventos gerados pelo nï¿½ j. */
     private int[][] matrixClock;
     
-    /** Buffer temporário e thread-safe para armazenar mensagens recebidas da rede pendentes de validação causal ou estabilização. */
+    /** Buffer temporï¿½rio e thread-safe para armazenar mensagens recebidas da rede pendentes de validaï¿½ï¿½o causal ou estabilizaï¿½ï¿½o. */
     private final List<BufferedMessage> messageBuffer;
     
     /** Contador interno que rastreia a quantidade total de mensagens geradas localmente que foram entregues com sucesso. */
     private int localMessagesDelivered = 0;
     
-    /** Utilitário de rede encarregado de realizar o envio físico de pacotes datagrama UDP. */
+    /** Utilitï¿½rio de rede encarregado de realizar o envio fï¿½sico de pacotes datagrama UDP. */
     private UDPSender udpSender;
 
+    // Fila thread-safe de mensagens retidas na saÃ­da do emissor
+    private final List<DelayedPacket> outgoingDelayedQueue = Collections.synchronizedList(new ArrayList<>());
+
     /**
-     * Inicializa o middleware de multicast causal para o nó local.
+     * Inicializa o middleware de multicast causal para o nï¿½ local.
      *  @param ip IP unicast local.
      * @param port Porta unicast local.
-     * @param client Referência de retorno da aplicação cliente.
+     * @param client Referï¿½ncia de retorno da aplicaï¿½ï¿½o cliente.
      */
     public CausalMulticast(String ip, Integer port, ICausalMulticast client) {
         this.localId = ip + ":" + port;
@@ -57,7 +60,7 @@ public class CausalMulticast {
     }
 
     /**
-     * Atualiza os membros do grupo e redimensiona a matriz de relógios preservando o histórico.
+     * Atualiza os membros do grupo e redimensiona a matriz de relï¿½gios preservando o histï¿½rico.
      * @param newPeers Nova lista de membros ativos mapeada pelo sistema de descoberta.
      */
     public synchronized void updateGroupMembers(List<String> newPeers) {
@@ -101,20 +104,21 @@ public class CausalMulticast {
     }
 
     /**
-     * Envia uma mensagem em modo multicast para todos os participantes válidos do grupo.
-     *  @param msg Conteúdo textual bruto a ser enviado.
-     * @param cliente Referência da aplicação cliente disparadora do evento.
+     * Prepara uma mensagem gerando e carimbando os relÃ³gios no formato causal.
+     * Atende parte do Requisito 7 delegando o envio e interceptaÃ§Ã£o para a aplicaÃ§Ã£o.
+     * * @param msg ConteÃºdo textual bruto a ser enviado.
+     * @return O envelope estruturado da mensagem gerada.
      */
-    public void mcsend(String msg, ICausalMulticast cliente) {
+    public BufferedMessage mcsend(String msg) {
         Integer localPeerIndex = this.peerToIndex.get(this.localId);
-        if (localPeerIndex == null) return;
+        if (localPeerIndex == null) return null;
 
         Map<String, Integer> currentVectorClock = new ConcurrentHashMap<>();
         synchronized (this) {
-            // 1. INCREMENTA ANTES: O nó avança seu relógio local significando um evento de envio
+            // 1. INCREMENTA ANTES: O nï¿½ avanï¿½a seu relï¿½gio local significando um evento de envio
             this.matrixClock[localPeerIndex][localPeerIndex] = this.matrixClock[localPeerIndex][localPeerIndex] + 1;
 
-            // 2. COPIA O RELÓGIO ATUALIZADO: A mensagem vai carregar o carimbo novo
+            // 2. COPIA O RELï¿½GIO ATUALIZADO: A mensagem vai carregar o carimbo novo
             for (String peer : this.activePeers) {
                 Integer peerIndex = this.peerToIndex.get(peer);
                 if (peerIndex != null) {
@@ -123,14 +127,13 @@ public class CausalMulticast {
             }
         }
 
-        BufferedMessage message = new BufferedMessage(msg, this.localId, currentVectorClock);
-        sendToGroup(message);
+        return new BufferedMessage(msg, this.localId, currentVectorClock);
     }
 
     /**
-     * Varre a lista de nós ativos no sistema e realiza disparos individuais (unicast) 
+     * Varre a lista de nï¿½s ativos no sistema e realiza disparos individuais (unicast) 
      * via UDP com o envelope da mensagem serializada, simulando um canal multicast.
-     *  @param message O envelope estruturado contendo dados lógicos e o texto.
+     *  @param message O envelope estruturado contendo dados lï¿½gicos e o texto.
      */
     private void sendToGroup(BufferedMessage message) {
         for (String peer: this.activePeers){
@@ -145,8 +148,20 @@ public class CausalMulticast {
     }
 
     /**
-     * Callback invocado de forma assíncrona pelo receptor UDP assim que pacotes brutos chegam da rede.
-     *  @param message A instância da mensagem encapsulada com os metadados.
+     * Realiza o envio fÃ­sico unicast imediato para um peer especÃ­fico.
+     */
+    public void sendUnicastDirect(String peer, BufferedMessage message) {
+        String[] parts = peer.split(":");
+        String ip = parts[0];
+        int port = Integer.parseInt(parts[1]);
+        if (udpSender != null) {
+            udpSender.sendMessage(ip, port, message);
+        }
+    }
+
+    /**
+     * Callback invocado de forma assï¿½ncrona pelo receptor UDP assim que pacotes brutos chegam da rede.
+     *  @param message A instï¿½ncia da mensagem encapsulada com os metadados.
      */
     public void onMessageReceived(BufferedMessage message) {
         String senderId = message.getSenderId();
@@ -171,7 +186,7 @@ public class CausalMulticast {
                 return;
             }
 
-            // 2. Atualiza a linha da matriz do remetente com o relógio que veio na mensagem
+            // 2. Atualiza a linha da matriz do remetente com o relï¿½gio que veio na mensagem
             for (String peer : this.activePeers) {
                 Integer colIndex = this.peerToIndex.get(peer);
                 if (colIndex != null) {
@@ -183,7 +198,7 @@ public class CausalMulticast {
             // 3. Insere a mensagem no buffer de espera
             this.messageBuffer.add(message);
 
-            // 4. Verifica se a mensagem pode ser entregue à aplicação
+            // 4. Verifica se a mensagem pode ser entregue ï¿½ aplicaï¿½ï¿½o
             boolean newDelivery;
             do {
                 newDelivery = false;
@@ -202,13 +217,13 @@ public class CausalMulticast {
                                     int localClockValue = this.matrixClock[localPeerIndex][peerIndex];
 
                                     if (peer.equals(msgSender)) {
-                                        // REGRA 1: Para o remetente, tem que ser exatamente a próxima (local + 1)
+                                        // REGRA 1: Para o remetente, tem que ser exatamente a prï¿½xima (local + 1)
                                         if (messageClockValue != localClockValue + 1) {
                                             canDeliver = false;
                                             break;
                                         }
                                     } else {
-                                        // REGRA 2: Para os outros, o local tem que estar igual ou mais avançado que a mensagem
+                                        // REGRA 2: Para os outros, o local tem que estar igual ou mais avanï¿½ado que a mensagem
                                         if (messageClockValue > localClockValue) {
                                             canDeliver = false;
                                             break;
@@ -236,7 +251,7 @@ public class CausalMulticast {
                 }
             } while (newDelivery);
 
-            // 5. Estabilização e Descarte do Buffer
+            // 5. Estabilizaï¿½ï¿½o e Descarte do Buffer
             List<BufferedMessage> stableMessages = new ArrayList<>();
             for (BufferedMessage bufferedMsg : this.messageBuffer) {
                 if (bufferedMsg.isDelivered()) {
@@ -246,7 +261,7 @@ public class CausalMulticast {
                     if (msgSenderIndex != null) {
                         int msgSeq = bufferedMsg.getVectorClock().getOrDefault(msgSender, 0);
 
-                        // Encontra o menor relógio registrado para o remetente entre todos os nós
+                        // Encontra o menor relï¿½gio registrado para o remetente entre todos os nï¿½s
                         int minReceived = Integer.MAX_VALUE;
                         for (String peer : this.activePeers) {
                             Integer peerIndex = this.peerToIndex.get(peer);
@@ -260,7 +275,7 @@ public class CausalMulticast {
 
                         if (msgSeq <= minReceived) {
                             stableMessages.add(bufferedMsg);
-                            System.out.println("[ESTABILIZAÇÃO] Mensagem de " + msgSender + " (\"" + bufferedMsg.getContent() + "\") foi recebida por todos os nós e foi descartada do buffer.");
+                            System.out.println("[ESTABILIZAï¿½ï¿½O] Mensagem de " + msgSender + " (\"" + bufferedMsg.getContent() + "\") foi recebida por todos os nï¿½s e foi descartada do buffer.");
                         }
                     }
                 }
@@ -270,18 +285,18 @@ public class CausalMulticast {
     }
 
     /**
-     * Retorna a matriz de relógios lógicos formatada visualmente em texto.
-     *  @return String contendo a tabela de estados da matriz de relógios locais.
+     * Retorna a matriz de relï¿½gios lï¿½gicos formatada visualmente em texto.
+     *  @return String contendo a tabela de estados da matriz de relï¿½gios locais.
      */
     public synchronized String getMatrixClockState() {
         StringBuilder sb = new StringBuilder();
-        sb.append("\n=================== MATRIZ DE RELÓGIOS ===================\n");
+        sb.append("\n=================== MATRIZ DE RELï¿½GIOS ===================\n");
         for (String rowPeer : this.activePeers) {
             Integer rowIdx = this.peerToIndex.get(rowPeer);
             if (rowIdx != null) {
                 String suffix = "";
                 if (rowPeer.equals(this.localId)) {
-                    suffix = " (Você)";
+                    suffix = " (Vocï¿½)";
                 }
                 sb.append(rowPeer).append(suffix).append(" -> [");
 
@@ -310,12 +325,27 @@ public class CausalMulticast {
         List<BufferedMessage> bufferCopy = new ArrayList<>(this.messageBuffer);
         for (BufferedMessage msg : bufferCopy) {
             sb.append("- De: ").append(msg.getSenderId())
-                    .append(" | Conteúdo: \"").append(msg.getContent()).append("\"")
-                    .append(" | Relógio da Mensagem: ").append(msg.getVectorClock())
-                    .append(" | Entregue à Tela: ").append(msg.isDelivered())
+                    .append(" | Conteï¿½do: \"").append(msg.getContent()).append("\"")
+                    .append(" | Relï¿½gio da Mensagem: ").append(msg.getVectorClock())
+                    .append(" | Entregue ï¿½ Tela: ").append(msg.isDelivered())
                     .append("\n");
         }
         sb.append("=========================================================");
         return sb.toString();
+    }
+
+    /** Retorna a lista de peers ativos para interaÃ§Ã£o na camada de aplicaÃ§Ã£o */
+    public List<String> getActivePeers() {
+        return new ArrayList<>(this.activePeers);
+    }
+
+    /** Retorna a lista de pacotes retidos */
+    public List<DelayedPacket> getOutgoingDelayedQueue() {
+        return this.outgoingDelayedQueue;
+    }
+
+    /** Retorna o ID local do nÃ³ */
+    public String getLocalId() {
+        return this.localId;
     }
 }
