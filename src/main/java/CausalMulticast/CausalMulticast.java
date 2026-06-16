@@ -4,21 +4,40 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+/**
+ * Componente core do Middleware responsável por gerenciar a entrega causal de mensagens.
+ * Utiliza o algoritmo de Matriz de Relógios Lógicos (Matrix Clock) para rastrear o progresso 
+ * de conhecimento global de cada nó na rede distribuída e aplicar descarte por estabilização.
+ */
 public class CausalMulticast {
 
+    /** Identificador único do nó local, formatado como "IP:Porta". */
     private final String localId;
+    
+    /** Interface de callback para entregar as mensagens ordenadas para a aplicação cliente. */
     private final ICausalMulticast client;
+    
+    /** Lista encadeada segura para threads contendo os identificadores de todos os peers ativos no grupo. */
     private final List<String> activePeers;
+    
+    /** Mapa que correlaciona o ID textual de um peer (IP:Porta) com seu índice numérico na Matriz de Relógios. */
     private Map<String, Integer> peerToIndex;
+    
+    /** Matriz de Relógios Vetoriais de tamanho N x N. Onde matrixClock[i][j] representa o conhecimento que o nó i possui sobre os eventos gerados pelo nó j. */
     private int[][] matrixClock;
+    
+    /** Buffer temporário e thread-safe para armazenar mensagens recebidas da rede pendentes de validação causal ou estabilização. */
     private final List<BufferedMessage> messageBuffer;
+    
+    /** Contador interno que rastreia a quantidade total de mensagens geradas localmente que foram entregues com sucesso. */
     private int localMessagesDelivered = 0;
+    
+    /** Utilitário de rede encarregado de realizar o envio físico de pacotes datagrama UDP. */
     private UDPSender udpSender;
 
     /**
      * Inicializa o middleware de multicast causal para o nó local.
-     * 
-     * @param ip IP unicast local.
+     *  @param ip IP unicast local.
      * @param port Porta unicast local.
      * @param client Referência de retorno da aplicação cliente.
      */
@@ -35,13 +54,11 @@ public class CausalMulticast {
         } catch (Exception e) {
             System.err.println("[MIDDLEWARE ERROR] Falha ao inicializar o UDPSender: " + e.getMessage());
         }
-
     }
 
     /**
      * Atualiza os membros do grupo e redimensiona a matriz de relógios preservando o histórico.
-     * 
-     * @param newPeers Nova lista de membros ativos.
+     * @param newPeers Nova lista de membros ativos mapeada pelo sistema de descoberta.
      */
     public synchronized void updateGroupMembers(List<String> newPeers) {
         List<String> sortedPeers = new ArrayList<>(newPeers);
@@ -84,10 +101,9 @@ public class CausalMulticast {
     }
 
     /**
-     * Envia uma mensagem multicast para o grupo garantindo a ordenação causal.
-     * 
-     * @param msg Texto da mensagem a ser enviada.
-     * @param cliente Referência de callback do cliente.
+     * Envia uma mensagem em modo multicast para todos os participantes válidos do grupo.
+     *  @param msg Conteúdo textual bruto a ser enviado.
+     * @param cliente Referência da aplicação cliente disparadora do evento.
      */
     public void mcsend(String msg, ICausalMulticast cliente) {
         Integer localPeerIndex = this.peerToIndex.get(this.localId);
@@ -111,6 +127,11 @@ public class CausalMulticast {
         sendToGroup(message);
     }
 
+    /**
+     * Varre a lista de nós ativos no sistema e realiza disparos individuais (unicast) 
+     * via UDP com o envelope da mensagem serializada, simulando um canal multicast.
+     *  @param message O envelope estruturado contendo dados lógicos e o texto.
+     */
     private void sendToGroup(BufferedMessage message) {
         for (String peer: this.activePeers){
             if (!peer.equals(this.localId)){
@@ -124,9 +145,8 @@ public class CausalMulticast {
     }
 
     /**
-     * Processa uma mensagem vinda da rede, aplicando ordenamento causal e estabilização.
-     * 
-     * @param message A mensagem recebida da rede.
+     * Callback invocado de forma assíncrona pelo receptor UDP assim que pacotes brutos chegam da rede.
+     *  @param message A instância da mensagem encapsulada com os metadados.
      */
     public void onMessageReceived(BufferedMessage message) {
         String senderId = message.getSenderId();
@@ -249,9 +269,8 @@ public class CausalMulticast {
     }
 
     /**
-     * Retorna a matriz de relógios lógicos formatada em texto.
-     * 
-     * @return Tabela de relógios lógicos.
+     * Retorna a matriz de relógios lógicos formatada visualmente em texto.
+     *  @return String contendo a tabela de estados da matriz de relógios locais.
      */
     public synchronized String getMatrixClockState() {
         StringBuilder sb = new StringBuilder();
@@ -280,8 +299,7 @@ public class CausalMulticast {
 
     /**
      * Retorna a fila de mensagens do buffer formatada em texto.
-     * 
-     * @return Fila de mensagens em espera.
+     *  @return String descritiva com o estado e mensagens residentes no buffer em espera.
      */
     public synchronized String getBufferState() {
         StringBuilder sb = new StringBuilder();

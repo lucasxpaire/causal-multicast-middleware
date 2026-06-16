@@ -4,6 +4,15 @@ import java.net.*;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+/**
+ * Serviço de Descoberta dinâmica de membros do grupo baseado em IP Multicast.
+ * Executa de forma contínua em threads separadas para anunciar a presença do nó local
+ * (através de batimentos cardíacos/heartbeats periódicos) e para escutar anúncios de outros nós,
+ * permitindo a atualização em tempo real do grupo de computação cooperativa.
+ *  @author -
+ * @version 1.0
+ */
+
 public class DiscoveryService implements Runnable {
     private static final String MULTICAST_GROUP = "224.0.0.1";
     private static final int MULTICAST_PORT = 4446;
@@ -15,9 +24,14 @@ public class DiscoveryService implements Runnable {
     private volatile boolean running = true;
     private final List<String> discoveredPeers = new CopyOnWriteArrayList<>();
 
-    // Armazena a interface de rede física que utilizaremos
     private NetworkInterface networkInterface;
 
+    /**
+     * Construtor para o serviço de descoberta dinâmica de peers.
+     *  @param localId Identificador único do nó local (normalmente no formato "IP:Porta").
+     * @param localPort Porta de rede local alocada para o middleware.
+     * @param causalMulticast Referência do motor central de ordenação causal.
+     */
     public DiscoveryService(String localId, int localPort, CausalMulticast causalMulticast) {
         this.localId = localId;
         this.localPort = localPort;
@@ -47,9 +61,6 @@ public class DiscoveryService implements Runnable {
         receiverThread.start();
     }
 
-    /**
-     * Versão Moderna do Sender (Sem métodos depreciados)
-     */
     private void runHeartbeatSender() {
         try {
             String localIp = this.localId.split(":")[0];
@@ -84,9 +95,6 @@ public class DiscoveryService implements Runnable {
         }
     }
 
-    /**
-     * Versão Moderna do Receiver (Usa SocketAddress + NetworkInterface)
-     */
     private void runHeartbeatReceiver() {
         try {
             // Cria o socket Multicast atrelado à porta do grupo
@@ -146,10 +154,18 @@ public class DiscoveryService implements Runnable {
         }
     }
 
+    /**
+     * Solicita a interrupção segura e limpa de todas as tarefas de background do serviço.
+     */
     public void stop() {
         running = false;
     }
 
+    /**
+     * Fornece uma cópia isolada e thread-safe contendo a lista de todos os peers
+     * remotos descobertos dinamicamente na rede.
+     *  @return Uma {@link List} contendo as strings identificadoras dos peers ativos.
+     */
     public List<String> getDiscoveredPeers() {
         return new ArrayList<>(discoveredPeers);
     }
