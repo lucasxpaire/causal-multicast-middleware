@@ -260,6 +260,7 @@ public class CausalMulticast {
 
                         if (msgSeq <= minReceived) {
                             stableMessages.add(bufferedMsg);
+                            System.out.println("[ESTABILIZAÇÃO] Mensagem de " + msgSender + " (\"" + bufferedMsg.getContent() + "\") foi recebida por todos os nós e foi descartada do buffer.");
                         }
                     }
                 }
